@@ -1,6 +1,7 @@
 {
   "name": "ecommerce-store-workspace",
   "private": true,
+  "workspaces": ["ecommerce-store"],
   "scripts": {
     "dev": "npm run dev --prefix ecommerce-store",
     "build": "npm run build --prefix ecommerce-store",

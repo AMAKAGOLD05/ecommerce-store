@@ -47,7 +47,7 @@ export type FileOrder = {
   subtotal: number;
   shipping: number;
   total: number;
-  status: string;
+  status: "pending" | "paid" | "shipped" | "delivered" | "cancelled";
   paymentMethod: string;
   notes: string;
   createdAt: string;
@@ -66,23 +66,23 @@ export type FilePage = {
   seoDescription: string;
 };
 
-type FileDB = {
-  users: FileUser[];
-  products: FileProduct[];
-  orders: FileOrder[];
-  pages: FilePage[];
-  settings: Record<string, unknown>;
-};
-
 const filePath = path.join(process.cwd(), ".data", "store.json");
 
 let mongoAvailable: boolean | null = null;
 
-function serialize<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value));
+function asJson<T>(value: unknown): T {
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
-function emptySettings() {
+function serialize<T>(value: T): T {
+  return asJson<T>(value);
+}
+
+function withStringId<T extends { _id?: unknown }>(value: T) {
+  return asJson<T & { _id: string }>({ ...value, _id: String(value._id ?? "") });
+}
+
+export function emptySettings() {
   return {
     siteName: "Lumen Lagos",
     tagline: "Nigerian design for everyday living",
@@ -126,6 +126,16 @@ function emptySettings() {
     },
   };
 }
+
+export type StoreSettings = ReturnType<typeof emptySettings>;
+
+type FileDB = {
+  users: FileUser[];
+  products: FileProduct[];
+  orders: FileOrder[];
+  pages: FilePage[];
+  settings: StoreSettings;
+};
 
 function readFileDb(): FileDB {
   try {
@@ -275,14 +285,18 @@ export async function findUserByEmail(email: string) {
   return readFileDb().users.find((user) => user.email === email) || null;
 }
 
-export async function listProducts(filter: { all?: boolean; featured?: boolean; category?: string } = {}) {
+export async function listProducts(
+  filter: { all?: boolean; featured?: boolean; category?: string } = {},
+): Promise<FileProduct[]> {
   await seedStore();
   if (await canUseMongo()) {
     const query: Record<string, unknown> = {};
     if (!filter.all) query.active = true;
     if (filter.featured) query.featured = true;
     if (filter.category && filter.category !== "all") query.category = filter.category;
-    return serialize(await Product.find(query).sort({ createdAt: -1 }).lean());
+    return (await Product.find(query).sort({ createdAt: -1 }).lean()).map((product) =>
+      asJson<FileProduct>({ ...product, _id: String(product._id) }),
+    );
   }
   return readFileDb()
     .products.filter((product) => {
@@ -372,7 +386,11 @@ export async function getOrder(id: string) {
 export async function createOrder(input: Omit<FileOrder, "_id" | "createdAt" | "orderNumber"> & { orderNumber?: string }) {
   if (await canUseMongo()) {
     const count = await Order.countDocuments();
-    const order = await Order.create({ ...input, orderNumber: input.orderNumber || `LM-${1001 + count}` });
+    const order = await Order.create({
+      ...input,
+      orderNumber: input.orderNumber || `LM-${1001 + count}`,
+      status: input.status,
+    });
     return serialize(order);
   }
   const db = readFileDb();
@@ -413,14 +431,15 @@ export async function adjustStock(productId: string, delta: number) {
   }
 }
 
-export async function getSettings() {
+export async function getSettings(): Promise<StoreSettings> {
   await seedStore();
   if (await canUseMongo()) {
     let settings = await SiteSettings.findOne().lean();
     if (!settings) settings = (await SiteSettings.create({})).toObject();
-    return serialize(settings);
+    const parsed = asJson<Partial<StoreSettings>>(settings);
+    return { ...emptySettings(), ...parsed };
   }
-  return readFileDb().settings;
+  return { ...emptySettings(), ...readFileDb().settings };
 }
 
 export async function updateSettings(input: Record<string, unknown>) {
@@ -437,7 +456,9 @@ export async function updateSettings(input: Record<string, unknown>) {
 export async function listPages(all = false) {
   await seedStore();
   if (await canUseMongo()) {
-    return serialize(await Page.find(all ? {} : { published: true }).sort({ title: 1 }).lean());
+    return (await Page.find(all ? {} : { published: true }).sort({ title: 1 }).lean()).map((page) =>
+      asJson<FilePage>({ ...page, _id: String(page._id) }),
+    );
   }
   return readFileDb()
     .pages.filter((page) => all || page.published)

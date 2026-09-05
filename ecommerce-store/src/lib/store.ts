@@ -1,4 +1,13 @@
-import { getPageBySlug, getProductBySlug, getSettings, listPages, listProducts } from "@/lib/data";
+import {
+  getPageBySlug,
+  getProductBySlug,
+  getSettings,
+  listPages,
+  listProducts,
+  type FilePage,
+  type FileProduct,
+  type StoreSettings,
+} from "@/lib/data";
 
 export { getSettings };
 
@@ -21,7 +30,7 @@ export async function getStorePage(slug: string) {
   return getPageBySlug(slug);
 }
 
-export type StoreProduct = Awaited<ReturnType<typeof getActiveProducts>>[number];
-export type SerializedSettings = Awaited<ReturnType<typeof getSettings>>;
-export type SerializedPage = Awaited<ReturnType<typeof getPublishedPages>>[number];
+export type StoreProduct = FileProduct;
+export type SerializedSettings = StoreSettings;
+export type SerializedPage = FilePage;
 export type SerializedProduct = StoreProduct;

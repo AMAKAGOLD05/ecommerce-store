@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { HeroSection } from "@/components/hero-section";
 import { ProductCard } from "@/components/product-card";
-import { getActiveProducts, getSettings, type StoreProduct } from "@/lib/store";
+import { emptySettings } from "@/lib/data";
+import { getActiveProducts, getSettings, type SerializedSettings, type StoreProduct } from "@/lib/store";
 
 export default async function HomePage() {
-  let settings;
+  let settings: SerializedSettings = emptySettings();
   let products: StoreProduct[] = [];
 
   try {
@@ -14,23 +15,7 @@ export default async function HomePage() {
       products = await getActiveProducts();
     }
   } catch {
-    settings = {
-      hero: {
-        enabled: true,
-        eyebrow: "Made in Nigeria",
-        title: "Quiet luxury, from Lagos to your door",
-        subtitle: "Adire, aso-oke, and home objects from Nigerian makers — delivered nationwide.",
-        ctaText: "Open shop",
-        ctaHref: "/shop",
-        secondaryCtaText: "Staff login",
-        secondaryCtaHref: "/admin/login",
-        imageUrl:
-          "https://images.unsplash.com/photo-1618828665347-d870c38c95c7?auto=format&fit=crop&w=1800&q=80",
-        overlay: 45,
-      },
-      featured: { heading: "This week in the studio", subheading: "New pieces from Lagos and beyond." },
-      newsletter: { heading: "Join the list", subheading: "Early access to drops and restocks." },
-    };
+    settings = emptySettings();
   }
 
   return (

@@ -1,6 +1,7 @@
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { getPublishedPages, getSettings } from "@/lib/store";
+import { emptySettings } from "@/lib/data";
+import { getPublishedPages, getSettings, type SerializedSettings } from "@/lib/store";
 import { seedStore } from "@/lib/seed";
 
 export default async function StoreLayout({
@@ -14,20 +15,14 @@ export default async function StoreLayout({
     // Store still renders if MongoDB is offline; pages can show empty states.
   }
 
-  let settings;
+  let settings: SerializedSettings = emptySettings();
   let pages: { title: string; slug: string; showInFooter?: boolean }[] = [];
 
   try {
     settings = await getSettings();
     pages = await getPublishedPages();
   } catch {
-    settings = {
-      siteName: "Lumen Lagos",
-      logoUrl: "",
-      announcement: { enabled: true, text: "Free nationwide shipping on orders over ₦80,000." },
-      footer: { blurb: "A Lagos shop for Nigerian makers.", copyright: "Lumen Lagos." },
-      contact: { email: "hello@lumen.ng" },
-    };
+    settings = emptySettings();
   }
 
   return (
