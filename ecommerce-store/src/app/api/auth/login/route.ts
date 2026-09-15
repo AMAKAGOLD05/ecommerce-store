@@ -6,6 +6,16 @@ import { json } from "@/lib/utils";
 
 export async function POST(request: Request) {
   try {
+    if (!process.env.MONGODB_URI) {
+      return json(
+        {
+          error:
+            "MongoDB is not configured. Set MONGODB_URI in the environment (Vercel → Settings → Environment Variables).",
+        },
+        500,
+      );
+    }
+
     const body = await request.json();
     const email = String(body.email || "").toLowerCase().trim();
     const password = String(body.password || "");
@@ -19,8 +29,12 @@ export async function POST(request: Request) {
       return json({ error: "Invalid email or password." }, 401);
     }
 
+    if (user.role !== "admin") {
+      return json({ error: "Invalid email or password." }, 401);
+    }
+
     const token = await signSession({
-      id: String(user._id),
+      id: user._id,
       email: user.email,
       name: user.name,
       role: "admin",
@@ -32,6 +46,17 @@ export async function POST(request: Request) {
     return json({ ok: true, user: { name: user.name, email: user.email } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Login failed.";
-    return json({ error: message }, 500);
+    const isMongo =
+      /MONGODB_URI|buffering timed out|Server selection timed out|ECONNREFUSED|MongoNetwork/i.test(
+        message,
+      );
+    return json(
+      {
+        error: isMongo
+          ? "Could not reach MongoDB. Check MONGODB_URI and that the Atlas cluster is running."
+          : message,
+      },
+      500,
+    );
   }
 }

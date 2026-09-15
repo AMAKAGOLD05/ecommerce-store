@@ -31,8 +31,8 @@ export async function connectDB() {
   if (!cache.promise) {
     cache.promise = mongoose.connect(mongodbUri, {
       bufferCommands: false,
-      // Atlas cold starts need more than a local Mongo timeout.
-      serverSelectionTimeoutMS: 10000,
+      // Atlas / serverless cold starts need a generous timeout.
+      serverSelectionTimeoutMS: 20000,
     });
   }
 
