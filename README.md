@@ -59,7 +59,7 @@ ADMIN_PASSWORD=Admin123!
 ADMIN_NAME=Store Admin
 ```
 
-Do **not** set `USE_FILE_DB` on Vercel (that forces the local JSON file store).
+Do **not** set `USE_FILE_DB` — the store uses MongoDB only.
 
 ### 3. Redeploy
 
@@ -71,7 +71,7 @@ Redeploy from the Vercel dashboard (or push a commit) so the new env vars apply.
 - Email: `admin@lumen.store`
 - Password: `Admin123!`
 
-The first login seeds sample products, pages, a demo sale, and default site settings.
+The first run creates the admin user and blank site settings in MongoDB. Products, pages, and orders are empty until you add them in the admin dashboard.
 
 ### What you can manage
 

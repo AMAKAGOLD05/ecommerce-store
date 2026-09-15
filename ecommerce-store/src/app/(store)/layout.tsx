@@ -12,7 +12,7 @@ export default async function StoreLayout({
   try {
     await seedStore();
   } catch {
-    // Store still renders if MongoDB is offline; pages can show empty states.
+    // Store still renders with empty defaults if MongoDB is unreachable.
   }
 
   let settings: SerializedSettings = emptySettings();
