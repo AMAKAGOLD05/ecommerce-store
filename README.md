@@ -36,14 +36,34 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Deploy on Vercel
 
-This project is already imported with **Root Directory** set to `ecommerce-store`. Keep that setting. Add these environment variables in the Vercel project:
+This project is already imported with **Root Directory** set to `ecommerce-store`. Keep that setting.
+
+### 1. Create MongoDB Atlas (from Vercel)
+
+1. Open [MongoDB Atlas in the Vercel Marketplace](https://vercel.com/marketplace/mongodbatlas/atlas).
+2. Click **Install** → **Accept and Create**.
+3. Choose **Free** cluster, a region close to your deploy (e.g. Washington `iad1`), and name it `ecommerce-store`.
+4. Click **Create MongoDB Atlas Cluster** and wait until it shows **Available**.
+5. Connect the store to the **ecommerce-store** project (Production + Preview).
+
+Vercel will set `MONGODB_URI` automatically.
+
+### 2. Add the remaining env vars
+
+In the Vercel project → **Settings** → **Environment Variables**, add:
 
 ```
-MONGODB_URI=your-mongodb-atlas-uri
 JWT_SECRET=a-long-random-secret
 ADMIN_EMAIL=admin@lumen.store
 ADMIN_PASSWORD=Admin123!
+ADMIN_NAME=Store Admin
 ```
+
+Do **not** set `USE_FILE_DB` on Vercel (that forces the local JSON file store).
+
+### 3. Redeploy
+
+Redeploy from the Vercel dashboard (or push a commit) so the new env vars apply.
 
 ## Admin dashboard
 
