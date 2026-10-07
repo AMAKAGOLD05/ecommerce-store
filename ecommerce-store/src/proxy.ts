@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { jwtVerify } from "jose";
-import { getJwtSecret } from "@/lib/jwt-secret";
+import { COOKIE_NAME, verifySessionToken } from "@/lib/session-token";
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -10,23 +9,23 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = request.cookies.get("admin_session")?.value;
+  const token = request.cookies.get(COOKIE_NAME)?.value;
   if (!token) {
     const login = new URL("/admin/login", request.url);
     login.searchParams.set("from", pathname);
     return NextResponse.redirect(login);
   }
 
-  try {
-    await jwtVerify(token, getJwtSecret());
+  const session = await verifySessionToken(token);
+  if (session) {
     return NextResponse.next();
-  } catch {
-    const login = new URL("/admin/login", request.url);
-    login.searchParams.set("from", pathname);
-    const response = NextResponse.redirect(login);
-    response.cookies.delete("admin_session");
-    return response;
   }
+
+  const login = new URL("/admin/login", request.url);
+  login.searchParams.set("from", pathname);
+  const response = NextResponse.redirect(login);
+  response.cookies.set(COOKIE_NAME, "", { path: "/", maxAge: 0 });
+  return response;
 }
 
 export const config = {

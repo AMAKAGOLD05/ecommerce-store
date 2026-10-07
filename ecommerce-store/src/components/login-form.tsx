@@ -11,21 +11,36 @@ export function LoginForm() {
     setBusy(true);
     setError("");
     const form = new FormData(event.currentTarget);
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: form.get("email"),
-        password: form.get("password"),
-      }),
-    });
-    const payload = await response.json();
-    if (!response.ok) {
+
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          email: form.get("email"),
+          password: form.get("password"),
+        }),
+      });
+
+      let payload: { error?: string } = {};
+      try {
+        payload = await response.json();
+      } catch {
+        payload = { error: "Login failed. Check MongoDB and try again." };
+      }
+
+      if (!response.ok) {
+        setError(payload.error || "Could not sign in.");
+        setBusy(false);
+        return;
+      }
+
+      window.location.assign("/admin");
+    } catch {
+      setError("Network error. Please try again.");
       setBusy(false);
-      setError(payload.error || "Could not sign in.");
-      return;
     }
-    window.location.href = "/admin";
   }
 
   return (
@@ -42,6 +57,7 @@ export function LoginForm() {
           name="email"
           type="email"
           required
+          autoComplete="username"
           defaultValue="admin@lumen.store"
           className="mt-8 w-full rounded-xl border border-[#d8cbbb] bg-white px-4 py-3"
         />
@@ -49,6 +65,7 @@ export function LoginForm() {
           name="password"
           type="password"
           required
+          autoComplete="current-password"
           defaultValue="Admin123!"
           className="mt-3 w-full rounded-xl border border-[#d8cbbb] bg-white px-4 py-3"
         />

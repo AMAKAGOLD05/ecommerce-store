@@ -1,8 +1,8 @@
-import { cookies } from "next/headers";
-import { json } from "@/lib/utils";
+import { NextResponse } from "next/server";
+import { COOKIE_NAME, sessionCookieOptions } from "@/lib/session-token";
 
 export async function POST() {
-  const store = await cookies();
-  store.delete("admin_session");
-  return json({ ok: true });
+  const response = NextResponse.json({ ok: true });
+  response.cookies.set(COOKIE_NAME, "", { ...sessionCookieOptions(), maxAge: 0 });
+  return response;
 }

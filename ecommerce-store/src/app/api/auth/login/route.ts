@@ -1,18 +1,17 @@
 import bcrypt from "bcryptjs";
-import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 import { findUserByEmail } from "@/lib/data";
-import { sessionCookieOptions, signSession } from "@/lib/auth";
-import { json } from "@/lib/utils";
+import { COOKIE_NAME, sessionCookieOptions, signSession } from "@/lib/session-token";
 
 export async function POST(request: Request) {
   try {
     if (!process.env.MONGODB_URI) {
-      return json(
+      return NextResponse.json(
         {
           error:
             "MongoDB is not configured. Set MONGODB_URI in the environment (Vercel → Settings → Environment Variables).",
         },
-        500,
+        { status: 500 },
       );
     }
 
@@ -21,16 +20,17 @@ export async function POST(request: Request) {
     const password = String(body.password || "");
 
     if (!email || !password) {
-      return json({ error: "Email and password are required." }, 400);
+      return NextResponse.json({ error: "Email and password are required." }, { status: 400 });
     }
 
     const user = await findUserByEmail(email);
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-      return json({ error: "Invalid email or password." }, 401);
+    if (!user || user.role !== "admin") {
+      return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }
 
-    if (user.role !== "admin") {
-      return json({ error: "Invalid email or password." }, 401);
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) {
+      return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }
 
     const token = await signSession({
@@ -40,23 +40,26 @@ export async function POST(request: Request) {
       role: "admin",
     });
 
-    const store = await cookies();
-    store.set("admin_session", token, sessionCookieOptions());
-
-    return json({ ok: true, user: { name: user.name, email: user.email } });
+    // Set cookie on the response so browsers always receive Set-Cookie.
+    const response = NextResponse.json({
+      ok: true,
+      user: { name: user.name, email: user.email },
+    });
+    response.cookies.set(COOKIE_NAME, token, sessionCookieOptions());
+    return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Login failed.";
     const isMongo =
-      /MONGODB_URI|buffering timed out|Server selection timed out|ECONNREFUSED|MongoNetwork/i.test(
+      /MONGODB_URI|buffering timed out|Server selection timed out|ECONNREFUSED|MongoNetwork|querySrv/i.test(
         message,
       );
-    return json(
+    return NextResponse.json(
       {
         error: isMongo
           ? "Could not reach MongoDB. Check MONGODB_URI and that the Atlas cluster is running."
           : message,
       },
-      500,
+      { status: 500 },
     );
   }
 }

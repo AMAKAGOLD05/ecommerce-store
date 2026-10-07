@@ -108,31 +108,41 @@ export function emptySettings() {
 
 export type StoreSettings = ReturnType<typeof emptySettings>;
 
-/** Ensures Mongo is up, admin exists (synced from env), and site settings doc exists. */
-export async function seedStore() {
+/** Creates/syncs the admin user from env. Avoids hashing on every request. */
+export async function ensureAdmin() {
   await connectDB();
 
   const email = (process.env.ADMIN_EMAIL || "admin@lumen.store").toLowerCase().trim();
   const password = process.env.ADMIN_PASSWORD || "Admin123!";
   const name = process.env.ADMIN_NAME || "Store Admin";
-  const passwordHash = await bcrypt.hash(password, 10);
 
   const existing = await User.findOne({ email });
   if (!existing) {
     await User.create({
       name,
       email,
-      passwordHash,
+      passwordHash: await bcrypt.hash(password, 10),
       role: "admin",
     });
-  } else {
-    const passwordMatches = await bcrypt.compare(password, existing.passwordHash);
-    if (!passwordMatches || existing.name !== name) {
-      existing.name = name;
-      if (!passwordMatches) existing.passwordHash = passwordHash;
-      await existing.save();
-    }
+    return email;
   }
+
+  const passwordMatches = await bcrypt.compare(password, existing.passwordHash);
+  if (!passwordMatches) {
+    existing.passwordHash = await bcrypt.hash(password, 10);
+    existing.name = name;
+    await existing.save();
+  } else if (existing.name !== name) {
+    existing.name = name;
+    await existing.save();
+  }
+
+  return email;
+}
+
+/** Ensures Mongo is up, admin exists, and site settings doc exists. */
+export async function seedStore() {
+  const email = await ensureAdmin();
 
   if ((await SiteSettings.countDocuments()) === 0) {
     await SiteSettings.create(emptySettings());
@@ -150,7 +160,7 @@ export type AuthUser = {
 };
 
 export async function findUserByEmail(email: string): Promise<AuthUser | null> {
-  await seedStore();
+  await ensureAdmin();
   const user = await User.findOne({ email: email.toLowerCase().trim() }).lean();
   if (!user?.passwordHash) return null;
   return {
